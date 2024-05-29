@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+    </head>
+    <body>
+        <div class="centered">
+            <div class="texts">
+                <h1 style="color:rgb(166, 0, 255);font-weight: 600;">TargetBall</h1>
+            </div>
+            <div class="game">
+                <img src="assets/images/ball.png" id="ballImage">
+                <img src="assets/images/square.png" id="square">
+                <img src="assets/images/target.png" id="target">
+                <img src="assets/images/arrow.png" id="arrow">
+            </div>
+            <div class="buttons">
+                <div class="sldContainer" id="powerSldCont">
+                    <h1>40.00</h1>
+                    <input type="range" min="1" max="8000" value="4000" class="slider" id="powerSld">                    
+                </div>
+                <button id="launchBtn">Launch</button>
+                <div class="sldContainer" id="rotateSldCont">
+                    <h1>0</h1>
+                    <input type="range" min="-180" max="180" value="0" class="slider" id="rotateSld">
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<script>
+
+    const ball = document.querySelector("#ballImage");
+    const button = document.querySelector("#launchBtn");
+    const powerSld = document.querySelector("#powerSld");
+    const rotateSld = document.querySelector("#rotateSld");
+    const powerTxt = document.querySelector("#powerSldCont h1");
+    const rotateTxt = document.querySelector("#rotateSldCont h1");
+    const cube = document.querySelector("#square");
+    const target = document.querySelector("#target");
+    const arrow = document.querySelector("#arrow");
+
+    powerSld.oninput = function(){
+        powerTxt.innerHTML = powerSld.value/100;
+        arrow.style.width = `${powerSld.value/100*7.5}px`
+    }
+    rotateSld.oninput = function(){
+        rotateTxt.innerHTML = rotateSld.value;
+        arrow.style.transform = `rotate(${-rotateSld.value}deg)`;
+    }
+
+
+    const g = 3924;
+    const BOUNCE_INDEX = 0.8;
+
+    const bottomLimit = -400;
+    const topLimit = 400;
+    const rightLimit = 1130;
+    const leftLimit = -1130;
+    
+    const beginningY = -50;
+    const beginningX = -1000;
+
+    let realTime = 0;
+    let lastYBounceTime = 0;
+    let lastXBounceTime = 0;
+    let lastYBounceY = beginningY;
+    let lastXBounceX = beginningX;
+    let lastYBounceVelocity = 0;
+    let lastXBounceVelocity = 0;
+    let y;
+    let x;
+    let currentYVelocity = lastYBounceVelocity;
+    let currentXVelocity = lastXBounceVelocity;
+
+    let isBouncing = false;
+
+    function reset(id){
+        ball.style.margin = `0 0 ${beginningY}px ${beginningX}px`;
+        clearInterval(id);   
+        realTime = 0;
+        lastYBounceTime = 0;
+        lastXBounceTime = 0;
+        lastYBounceY = beginningY;
+        lastXBounceX = beginningX;
+        lastYBounceVelocity = 0;
+        lastXBounceVelocity = 0;
+        y;
+        x;
+        currentYVelocity = lastYBounceVelocity;
+        currentXVelocity = lastXBounceVelocity;
+        isBouncing = false;
+    }
+    let id;
+
+    button.addEventListener("click", ()=>{
+        if(isBouncing){
+            reset(id);
+            return;  
+        } 
+        isBouncing = true;
+
+        let power = powerSld.value;
+        let angle = rotateSld.value >= 0 ? rotateSld.value : (360+parseInt(rotateSld.value));
+        lastYBounceVelocity = Math.sin(angle/180*Math.PI)*power;
+        lastXBounceVelocity = Math.cos(angle/180*Math.PI)*power;
+        currentYVelocity = lastYBounceVelocity;
+        currentXVelocity = lastXBounceVelocity; 
+
+        id = setInterval(() => {
+            realTime++;
+
+            let reducedYTime = (realTime-lastYBounceTime)/100;
+            let reducedXTime = (realTime-lastXBounceTime)/100;
+
+            y = -0.5*g * reducedYTime*reducedYTime + lastYBounceVelocity*reducedYTime + lastYBounceY;
+            x = reducedXTime*currentXVelocity + lastXBounceX;
+            currentYVelocity = -reducedYTime*g+lastYBounceVelocity;
+
+            ball.style.margin = `0 0 ${y}px ${x}px`;
+            
+            if(y <= bottomLimit){
+                currentYVelocity = -currentYVelocity*BOUNCE_INDEX;
+                lastYBounceY = bottomLimit;
+                lastYBounceTime = realTime;
+                lastYBounceVelocity = currentYVelocity;
+                if(Math.abs(currentYVelocity) <= 100){
+                   reset(id);
+                }
+            }  
+            if(y >= topLimit){
+                currentYVelocity = -currentYVelocity*BOUNCE_INDEX;
+                lastYBounceY = topLimit;
+                lastYBounceTime = realTime;
+                lastYBounceVelocity = currentYVelocity;
+            }  
+            if(x >= rightLimit){
+                currentXVelocity = -currentXVelocity*BOUNCE_INDEX;
+                lastXBounceX = rightLimit;
+                lastXBounceTime = realTime;
+                lastXBounceVelocity = currentXVelocity;
+            }  
+            if(x <= leftLimit){
+                currentXVelocity = -currentXVelocity*BOUNCE_INDEX;
+                lastXBounceX = leftLimit;
+                lastXBounceTime = realTime;
+                lastXBounceVelocity = currentXVelocity;
+            }  
+            
+            var style = target.currentStyle || window.getComputedStyle(target);
+            let targetX = parseInt(style.marginLeft.replace("px", ""))-50;
+            let targetY = parseInt(style.marginBottom.replace("px", ""));
+            let targetWidth = parseInt(style.width.replace("px", ""));
+            let targetHeight = parseInt(style.height.replace("px", ""));
+
+            if(y >= targetY-targetHeight && y <= targetY+targetHeight && x >= targetX-targetWidth && x <= targetX+targetWidth){
+                reset(id);
+            }
+
+            if(realTime/100 >= 6){
+                reset(id);           
+            } 
+            
+        }, 10); 
+        cube.addEventListener("click", ()=>{
+            reset(id);
+        });
+    });
+
+
+     
+
+</script>
+
+<style>
+    *{ 
+        user-select: none;
+        padding: 0;
+        margin: 0;
+    }
+    .game{
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 70vh;
+        background-color: cyan;
+        z-index: 1;
+        width: 80%;
+        overflow: hidden;
+    }
+    #ballImage{
+        height: 100px;
+        margin-bottom: -50px;
+        margin-left: -1000px;
+        z-index: 4;
+    }
+    #launchBtn{
+        height: 80px;
+        width: 150px;
+        font-size: 30px;
+        background-color: yellow;
+        color: purple;
+        z-index: 5;
+    }
+    .centered{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background-color: orange;
+    }
+    .buttons{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 100px;
+    }
+    .texts{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 100px;
+        z-index: 5;
+    }
+    .slider{
+        width: 200px;
+    }
+    .sldContainer{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    #rotateSldCont{
+        margin-left: 100px;
+    }
+    #powerSldCont{
+        margin-right: 100px;
+    }
+    #square{
+        width: 200px;
+        position: fixed;
+        margin-top: 330px;
+        margin-right: 1000px;
+        z-index: 2;
+    }
+    #target{
+        width: 25px;
+        height: 50px;
+        position: fixed;
+        margin-bottom: -100px;
+        margin-left: 1200px;
+        z-index: 2;
+    }
+    #arrow{
+        width: 300px;
+        height: 100px;
+        position: fixed;
+        margin-top: 60px;
+        margin-right: 980px;
+        z-index: 2;
+    }
+</style>
